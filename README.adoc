@@ -1,0 +1,3 @@
+= Webflux demo application
+
+A demo appication using Spring Boot 2 and Webflux
