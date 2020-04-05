@@ -1,34 +1,40 @@
 package com.capgemini.demo.webflux.model.domain;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.Objects;
 
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
-
-import static javax.persistence.FetchType.LAZY;
 
 /**
  *
  * @author oburgosm
  */
 @Entity
-@Table(name= "Orders")
+@Table(name = "Orders")
 public class Order implements Serializable {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @ManyToOne(fetch = LAZY)
-    private OrderItem productOrder;
-    
-    @ManyToOne(fetch = LAZY)
+
+    @OneToMany(mappedBy = "order", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    private List<OrderItem> orderItems;
+
+    @ManyToOne
     private Customer customer;
+
+    @Column(nullable = false)
+    private Double amount;
 
     public Long getId() {
         return id;
@@ -38,12 +44,12 @@ public class Order implements Serializable {
         this.id = id;
     }
 
-    public OrderItem getProductOrder() {
-        return productOrder;
+    public List<OrderItem> getOrderItems() {
+        return orderItems;
     }
 
-    public void setProductOrder(OrderItem productOrder) {
-        this.productOrder = productOrder;
+    public void setOrderItems(List<OrderItem> orderItems) {
+        this.orderItems = orderItems;
     }
 
     public Customer getCustomer() {
@@ -52,6 +58,14 @@ public class Order implements Serializable {
 
     public void setCustomer(Customer customer) {
         this.customer = customer;
+    }
+
+    public Double getAmount() {
+        return amount;
+    }
+
+    public void setAmount(Double amount) {
+        this.amount = amount;
     }
 
     @Override
@@ -75,7 +89,5 @@ public class Order implements Serializable {
         final Order other = (Order) obj;
         return Objects.equals(this.id, other.id);
     }
-    
-    
-    
+
 }

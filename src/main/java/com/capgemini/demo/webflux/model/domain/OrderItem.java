@@ -9,7 +9,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 
-import static javax.persistence.FetchType.LAZY;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  *
@@ -17,16 +17,20 @@ import static javax.persistence.FetchType.LAZY;
  */
 @Entity
 public class OrderItem implements Serializable {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @ManyToOne(fetch = LAZY)
+
+    @ManyToOne
+    @JsonIgnore
+    private Order order;
+
+    @ManyToOne
     private Product product;
-    
+
     private Double price;
-    
+
     private Integer quantity;
 
     public Long getId() {
@@ -61,6 +65,14 @@ public class OrderItem implements Serializable {
         this.quantity = quantity;
     }
 
+    public Order getOrder() {
+        return order;
+    }
+
+    public void setOrder(Order order) {
+        this.order = order;
+    }
+
     @Override
     public int hashCode() {
         int hash = 5;
@@ -82,7 +94,5 @@ public class OrderItem implements Serializable {
         final OrderItem other = (OrderItem) obj;
         return Objects.equals(this.id, other.id);
     }
-    
-    
-    
+
 }

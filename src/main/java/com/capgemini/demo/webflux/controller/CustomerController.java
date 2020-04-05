@@ -58,7 +58,7 @@ public class CustomerController {
     }
 
     @PostMapping
-    public Mono<Customer> insertProduct(@RequestBody Customer customerDTO) {
+    public Mono<Customer> insertCustomer(@RequestBody Customer customerDTO) {
         Mono<Customer> blockingWrapper = Mono.fromCallable(() -> {
             Customer newCustomer = new Customer();
             newCustomer.setName(customerDTO.getName());
@@ -68,7 +68,7 @@ public class CustomerController {
     }
 
     @PutMapping
-    public Mono<Customer> updateProduct(@RequestBody Customer customerDTO) {
+    public Mono<Customer> updateCustomer(@RequestBody Customer customerDTO) {
         Mono<Customer> blockingWrapper = Mono.fromCallable(() -> {
             Optional<Customer> optionalCustomer = this.customerRepository.findById(customerDTO.getId());
             if (!optionalCustomer.isPresent()) {

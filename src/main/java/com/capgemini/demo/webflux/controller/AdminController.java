@@ -1,5 +1,7 @@
 package com.capgemini.demo.webflux.controller;
 
+import java.util.SplittableRandom;
+
 import javax.inject.Inject;
 
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,8 +12,8 @@ import com.capgemini.demo.webflux.model.domain.Customer;
 import com.capgemini.demo.webflux.model.domain.Product;
 import com.capgemini.demo.webflux.model.repository.CustomerRepository;
 import com.capgemini.demo.webflux.model.repository.ProductRepository;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 /**
  * Controller to admin data base
@@ -27,18 +29,15 @@ public class AdminController {
     @Inject
     private CustomerRepository customerRepository;
     
+    private final SplittableRandom splittableRandom = new SplittableRandom();
+    
     /**
      * We insert some products in database
      * @return 
      */
     @PostMapping("init")
     public Mono<Void> initDataBase() {
-        Mono<Void> blockingWrapper = Mono.fromCallable(() -> {
-            initProducts();
-            initCustomers();
-            return null;
-        });
-        return blockingWrapper.subscribeOn(Schedulers.boundedElastic());
+        return initProducts().and(initCustomers());
     }
     
     private void insertNewProduct(String name, double price, Long quantity) {
@@ -55,17 +54,16 @@ public class AdminController {
         this.customerRepository.saveAndFlush(customer);
     }
 
-    private void initProducts() {
-        this.insertNewProduct("Camisa", 29.99, 1000L);
-        this.insertNewProduct("Jersey", 39.99, 10000L);
-        this.insertNewProduct("Pantalon", 49.95, 5000L);
+    private Mono<Void> initProducts() {
+        return Flux.range(1, 1000).doOnNext((i) -> {
+            this.insertNewProduct("Product"+i, this.splittableRandom.nextDouble(5d, 100d), this.splittableRandom.nextLong(0L, 100000L));
+        }).then();
     }
 
-    private void initCustomers() {
-        this.insertNewCustomer("Ana");
-        this.insertNewCustomer("Juan");
-        this.insertNewCustomer("Paco");
-        this.insertNewCustomer("Maria");
+    private Mono<Void> initCustomers() {
+        return Flux.range(1, 100).doOnNext((i) -> {
+            this.insertNewCustomer("Customer"+i);
+        }).then();
     }
     
 }
