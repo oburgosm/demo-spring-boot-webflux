@@ -1,7 +1,6 @@
 package com.capgemini.demo.webflux.controller;
 
 import java.util.List;
-import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.validation.constraints.NotNull;
@@ -17,7 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.capgemini.demo.webflux.mapper.ProductMapper;
 import com.capgemini.demo.webflux.model.domain.Product;
+import com.capgemini.demo.webflux.model.dto.ProductDTO;
 import com.capgemini.demo.webflux.model.repository.ProductRepository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -34,83 +35,77 @@ public class ProductController {
     @Inject
     private ProductRepository productRepository;
 
+    @Inject
+    private ProductMapper productMapper;
+
     @GetMapping
-    public Flux<Product> products() {
+    public Flux<ProductDTO> products() {
         Mono<List<Product>> blockingWrapper = Mono.fromCallable(() -> {
             return this.productRepository.findAll();
         });
-        return blockingWrapper.subscribeOn(Schedulers.boundedElastic()).flatMapMany(Flux::fromIterable);
+        return blockingWrapper
+                .flatMapMany(Flux::fromIterable)
+                .map(this.productMapper::productToProductDto)
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @GetMapping("/{id}")
-    public Mono<Product> product(@PathVariable @NotNull Long id) {
-        Mono<Product> blockingWrapper = Mono.fromCallable(() -> {
-            Optional<Product> optionalProduct = this.productRepository.findById(id);
-            if (!optionalProduct.isPresent()) {
-                throw new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "product not found"
-                );
-            } else {
-                return optionalProduct.get();
-            }
-        });
-        return blockingWrapper.subscribeOn(Schedulers.boundedElastic());
+    public Mono<ProductDTO> product(@PathVariable @NotNull Long id) {
+        return Mono.just(id)
+                .map(this.productRepository::findById)
+                .map((optional -> optional.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "product not found"))))
+                .map(this.productMapper::productToProductDto)
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @PostMapping
-    public Mono<Product> insertProduct(@RequestBody Product productDTO) {
-        Mono<Product> blockingWrapper = Mono.fromCallable(() -> {
-            Product newProduct = new Product();
-            newProduct.setName(productDTO.getName());
-            newProduct.setPrice(productDTO.getPrice());
-            newProduct.setQuantity(productDTO.getQuantity());
-            return this.productRepository.saveAndFlush(newProduct);
-        });
-        return blockingWrapper.subscribeOn(Schedulers.boundedElastic());
+    public Mono<ProductDTO> insertProduct(@RequestBody ProductDTO productDTO) {
+        return Mono.just(productDTO)
+                .map(this.productMapper::productDtoToProduct)
+                .map(this.productRepository::saveAndFlush)
+                .map(this.productMapper::productToProductDto)
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
+    /**
+     * Update only attributes of Product
+     *
+     * @param productDTO the product with ID and
+     * @return
+     */
     @PutMapping
-    public Mono<Product> updateProduct(@RequestBody Product productDTO) {
-        Mono<Product> blockingWrapper = Mono.fromCallable(() -> {
-            Optional<Product> optionalProduct = this.productRepository.findById(productDTO.getId());
-            if (!optionalProduct.isPresent()) {
-                throw new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "product not found"
-                );
-            }
-            Product product = optionalProduct.get();
-            String name = productDTO.getName();
-            if (name != null) {
-                product.setName(name);
-            }
-            Double price = productDTO.getPrice();
-            if (price != null) {
-                product.setPrice(price);
-            }
-            Long quantity = productDTO.getQuantity();
-            if (quantity != null) {
-                product.setQuantity(quantity);
-            }
-            return this.productRepository.saveAndFlush(product);
-        });
-        return blockingWrapper.subscribeOn(Schedulers.boundedElastic());
-
+    public Mono<ProductDTO> updateProduct(@RequestBody ProductDTO productDTO) {
+        return Mono.just(productDTO.getId())
+                .map(this.productRepository::findById)
+                .map((optional -> optional.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "product not found"))))
+                .map((Product p) -> {
+                    String name = productDTO.getName();
+                    if (name != null) {
+                        p.setName(name);
+                    }
+                    Double price = productDTO.getPrice();
+                    if (price != null) {
+                        p.setPrice(price);
+                    }
+                    Long quantity = productDTO.getQuantity();
+                    if (quantity != null) {
+                        p.setQuantity(quantity);
+                    }
+                    return p;
+                })
+                .map(this.productRepository::saveAndFlush)
+                .map(this.productMapper::productToProductDto)
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @DeleteMapping("/{id}")
-    public Mono<Void> delete(@PathVariable Long id) {
-        Mono<Void> blockingWrapper = Mono.fromCallable(() -> {
-            Optional<Product> optionalProduct = this.productRepository.findById(id);
-            if (!optionalProduct.isPresent()) {
-                throw new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "product not found"
-                );
-            }
-            Product product = optionalProduct.get();
-            this.productRepository.delete(product);
-            return null;
-        });
-        return blockingWrapper.subscribeOn(Schedulers.boundedElastic());
+    public Mono<ProductDTO> delete(@PathVariable Long id) {
+        return Mono.just(id)
+                .map(this.productRepository::findById)
+                .map((optional -> optional.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "product not found"))))
+                .doOnNext(this.productRepository::delete)
+                .map(this.productMapper::productToProductDto)
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
 }
