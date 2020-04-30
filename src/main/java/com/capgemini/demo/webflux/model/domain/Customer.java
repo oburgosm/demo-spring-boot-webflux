@@ -11,7 +11,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+
 
 /**
  *
@@ -28,7 +28,6 @@ public class Customer implements Serializable {
     private String name;
 
     @OneToMany(mappedBy = "customer")
-    @JsonIgnore
     private List<Order> orders;
 
     public Long getId() {

@@ -14,32 +14,35 @@ import com.capgemini.demo.webflux.model.repository.CustomerRepository;
 import com.capgemini.demo.webflux.model.repository.ProductRepository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * Controller to admin data base
+ *
  * @author oburgosm
  */
 @RestController
 @RequestMapping("/admin")
 public class AdminController {
-    
+
     @Inject
     private ProductRepository productRepository;
-    
+
     @Inject
     private CustomerRepository customerRepository;
-    
+
     private final SplittableRandom splittableRandom = new SplittableRandom();
-    
+
     /**
      * We insert some products in database
-     * @return 
+     *
+     * @return
      */
     @PostMapping("init")
     public Mono<Void> initDataBase() {
-        return initProducts().and(initCustomers());
+        return initProducts().and(initCustomers()).subscribeOn(Schedulers.boundedElastic());
     }
-    
+
     private void insertNewProduct(String name, double price, Long quantity) {
         Product product = new Product();
         product.setName(name);
@@ -47,7 +50,7 @@ public class AdminController {
         product.setQuantity(quantity);
         this.productRepository.saveAndFlush(product);
     }
-    
+
     private void insertNewCustomer(String name) {
         Customer customer = new Customer();
         customer.setName(name);
@@ -55,15 +58,22 @@ public class AdminController {
     }
 
     private Mono<Void> initProducts() {
-        return Flux.range(1, 1000).doOnNext((i) -> {
-            this.insertNewProduct("Product"+i, this.splittableRandom.nextDouble(5d, 100d), this.splittableRandom.nextLong(0L, 100000L));
-        }).then();
+        return Flux.range(1, 1000)
+                .parallel()
+                .runOn(Schedulers.parallel())
+                .doOnNext((i) -> {
+                    this.insertNewProduct("Product" + i, this.splittableRandom.nextDouble(5d, 100d), this.splittableRandom.nextLong(0L, 100000L));
+                }).then();
     }
 
     private Mono<Void> initCustomers() {
-        return Flux.range(1, 100).doOnNext((i) -> {
-            this.insertNewCustomer("Customer"+i);
-        }).then();
+        return Flux.range(1, 100)
+                .parallel()
+                .runOn(Schedulers.parallel())
+                .doOnNext((i) -> {
+                    this.insertNewCustomer("Customer" + i);
+                })
+                .then();
     }
-    
+
 }
